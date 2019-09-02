@@ -1,0 +1,8 @@
+{
+    "domain": "vdr",
+    "name": "Your Integration",
+    "documentation": "https://www.example.com",
+    "dependencies": [],
+    "codeowners": ["baschno"],
+    "requirements": ["pyvdr==0.1.2"]
+  }
