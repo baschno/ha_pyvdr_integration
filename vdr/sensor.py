@@ -24,9 +24,10 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
     from pyvdr import PYVDR
 
-    pyvdr_con = PYVDR(hostname='easyvdr.fritz.box')
+    _LOGGER.info('Set up VDR with hostname {}'.format(config['host']))
 
-    _LOGGER.info('vor setup')
+    pyvdr_con = PYVDR(hostname=config['host'])
+
     for sensor in pyvdr_con.sensors():
         _LOGGER.info('Setting up sensortype {}'.format(sensor))
         add_entities([VdrSensor(sensor, pyvdr_con)])
@@ -73,9 +74,13 @@ class VdrSensor(Entity):
         """
         if self._name is 'channel':
             response = self._pyvdr.get_channel()
-            self._state = response['name'];
-
             self._attributes = {}
+
+            if response is None:
+                self._state = 'off'
+                return
+
+            self._state = response['name'];
             self._attributes.update({
                 STATE_ATTR_CHANNEL_NAME: response['name'],
                 STATE_ATTR_CHANNEL_NUMBER: response['number']
