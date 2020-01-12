@@ -26,6 +26,7 @@ ATTR_IS_RECORDING = "is_recording"
 ATTR_DISKSTAT_TOTAL = "disksize_total"
 ATTR_DISKSTAT_FREE = "disksize_free"
 ATTR_DISKSTAT_USED_PERCENT = "disksize_used_percent"
+ATTR_ICON = "icon"
 
 ICON_VDR_ONLINE = "mdi:television-box"
 ICON_VDR_OFFLINE = "mdi:television-classic-off"
@@ -98,12 +99,14 @@ class VdrSensor(Entity):
 
             if response is None:
                 self._state = STATE_OFFLINE
+                self._attributes.update({ATTR_ICON: ICON_VDR_OFFLINE})
                 return
 
             self._state = STATE_ONLINE;
             self._attributes.update({
                 ATTR_CHANNEL_NAME: response['name'],
-                ATTR_CHANNEL_NUMBER: response['number']
+                ATTR_CHANNEL_NUMBER: response['number'],
+                ATTR_ICON: ICON_VDR_ONLINE
             })
 
             response = self._pyvdr.is_recording()
@@ -112,7 +115,10 @@ class VdrSensor(Entity):
                     ATTR_IS_RECORDING: True,
                     ATTR_RECORDING_NAME: response['name'],
                     ATTR_RECORDING_INSTANT: response['instant'],
-                    'icon': 'mdi:record-rec' })
+                    ATTR_ICON: 
+                        ICON_VDR_RECORDING_INSTANT 
+                            if response['instant'] == True 
+                            else ICON_VDR_RECORDING_TIMER })
             else:
                 self._attributes.update({
                     ATTR_IS_RECORDING: False
