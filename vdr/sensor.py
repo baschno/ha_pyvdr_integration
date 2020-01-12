@@ -1,10 +1,12 @@
 import logging
+from datetime import timedelta
 
 import voluptuous as vol
 
 from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import (PLATFORM_SCHEMA)
-from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
+from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
@@ -13,20 +15,37 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_PORT, default=6419): cv.port,
+    vol.Optional(CONF_TIMEOUT, default=10): cv.byte,
 })
 
-STATE_ATTR_CHANNEL_NAME = 'name'
-STATE_ATTR_CHANNEL_NUMBER = 'number'
-STATE_ATTR_RECORDING_NAME = 'name'
-STATE_ATTR_RECORDING_INSTANT = 'instant'
+ATTR_CHANNEL_NAME = 'channel_name'
+ATTR_CHANNEL_NUMBER = 'channel_number'
+ATTR_RECORDING_NAME = 'recording_name'
+ATTR_RECORDING_INSTANT = 'recording_instant'
+ATTR_IS_RECORDING = "is_recording"
+ATTR_DISKSTAT_TOTAL = "disksize_total"
+ATTR_DISKSTAT_FREE = "disksize_free"
+ATTR_DISKSTAT_USED_PERCENT = "disksize_used_percent"
+
+ICON_VDR_ONLINE = "mdi:television-box"
+ICON_VDR_OFFLINE = "mdi:television-classic-off"
+ICON_VDR_RECORDING_INSTANT = "mdi:record-rec"
+ICON_VDR_RECORDING_TIMER = "mdi:history"
+ICON_VDR_RECORDING_NONE = "mdi:close-circle-outline"
+
+
+STATE_ONLINE = "on"
+STATE_OFFLINE = "off"
+
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=5)
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
     from pyvdr import PYVDR
 
-    _LOGGER.info('Set up VDR with hostname {}'.format(config['host']))
+    _LOGGER.info('Set up VDR with hostname {}, timeout={}'.format(config['host'], config['timeout']))
 
-    pyvdr_con = PYVDR(hostname=config['host'])
+    pyvdr_con = PYVDR(hostname=config['host'], timeout=config['timeout'])
 
     for sensor in pyvdr_con.sensors():
         _LOGGER.info('Setting up sensortype {}'.format(sensor))
@@ -68,34 +87,41 @@ class VdrSensor(Entity):
         """Return the unit of measurement."""
         return ""
 
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        if self._name is 'channel':
+        if self._name is 'Vdrinfo':
             response = self._pyvdr.get_channel()
             self._attributes = {}
 
             if response is None:
-                self._state = 'off'
+                self._state = STATE_OFFLINE
                 return
 
-            self._state = response['name'];
+            self._state = STATE_ONLINE;
             self._attributes.update({
-                STATE_ATTR_CHANNEL_NAME: response['name'],
-                STATE_ATTR_CHANNEL_NUMBER: response['number']
+                ATTR_CHANNEL_NAME: response['name'],
+                ATTR_CHANNEL_NUMBER: response['number']
             })
 
-        if self._name is 'is_recording':
             response = self._pyvdr.is_recording()
-            if response is None:
-                self._state = 'off'
-                self._attributes = {}
-            else:
-                self._state = 'on'
-                self._attributes = {}
+            if response is not None:
                 self._attributes.update({
-                    STATE_ATTR_RECORDING_NAME: response['name'],
-                    STATE_ATTR_RECORDING_INSTANT: response['instant'],
+                    ATTR_IS_RECORDING: True,
+                    ATTR_RECORDING_NAME: response['name'],
+                    ATTR_RECORDING_INSTANT: response['instant'],
                     'icon': 'mdi:record-rec' })
+            else:
+                self._attributes.update({
+                    ATTR_IS_RECORDING: False
+                })
 
+            response = self._pyvdr.stat()
+            if response is not None:
+                self._attributes.update({
+                    ATTR_DISKSTAT_TOTAL: response[0],
+                    ATTR_DISKSTAT_FREE: response[1],
+                    ATTR_DISKSTAT_USED_PERCENT: response[2]
+                })
