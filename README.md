@@ -11,6 +11,7 @@ sensor:
   - platform: vdr
     host: vdr-local
     port: 6419
+    timeout: 2 # optional
 ```
 to your `configuration.yaml` file.
 
