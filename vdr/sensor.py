@@ -58,11 +58,22 @@ class VdrSensor(Entity):
 
     def __init__(self, name, pyvdr):
         """Initialize the sensor."""
-        self._state = None
-        self._attributes = None
+        self._state = STATE_OFFLINE
         self._name = name
         self._pyvdr = pyvdr
+        self._attributes = { 
+            ATTR_CHANNEL_NAME: '',
+            ATTR_CHANNEL_NUMBER: 0,
+            ATTR_DISKSTAT_TOTAL: 0,
+            ATTR_DISKSTAT_FREE: 0,
+            ATTR_DISKSTAT_USED_PERCENT: 0,
+            ATTR_IS_RECORDING: False,
+            ATTR_RECORDING_NAME: '',
+            ATTR_RECORDING_INSTANT: False,          
+        }
 
+    def _initAttributes(self):
+        return 
     @property
     def name(self):
         """Return the name of the sensor."""
