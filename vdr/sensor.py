@@ -110,7 +110,12 @@ class VdrSensor(Entity):
 
             if response is None:
                 self._state = STATE_OFFLINE
-                self._attributes.update({ATTR_ICON: ICON_VDR_OFFLINE})
+                self._attributes.update({
+                    ATTR_ICON: ICON_VDR_OFFLINE,
+                    ATTR_DISKSTAT_TOTAL: 0,
+                    ATTR_DISKSTAT_FREE: 0,
+                    ATTR_DISKSTAT_USED_PERCENT: 0
+                })
                 return
 
             self._state = STATE_ONLINE
