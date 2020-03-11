@@ -113,7 +113,7 @@ class VdrSensor(Entity):
                 self._attributes.update({ATTR_ICON: ICON_VDR_OFFLINE})
                 return
 
-            self._state = STATE_ONLINE;
+            self._state = STATE_ONLINE
             self._attributes.update({
                 ATTR_CHANNEL_NAME: response['name'],
                 ATTR_CHANNEL_NUMBER: response['number'],
