@@ -141,9 +141,9 @@ class VdrSensor(Entity):
                 })
 
             response = self._pyvdr.stat()
-            if response is not None:
+            if response is not None and len(response)==3:
                 self._attributes.update({
-                    ATTR_DISKSTAT_TOTAL: response[0],
-                    ATTR_DISKSTAT_FREE: response[1],
+                    ATTR_DISKSTAT_TOTAL: int(response[0]) * 1024 ** 2,
+                    ATTR_DISKSTAT_FREE: int(response[1]) * 1024 ** 2,
                     ATTR_DISKSTAT_USED_PERCENT: response[2]
                 })
