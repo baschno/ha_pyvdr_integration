@@ -5,15 +5,18 @@ import voluptuous as vol
 
 from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import (PLATFORM_SCHEMA)
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
+from homeassistant.const import CONF_NAME, CONF_HOST, CONF_PORT, CONF_TIMEOUT
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
+CONF_DEFAULT_NAME = "vdr"
+
 # Validation of the user's configuration
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
+    vol.Optional(CONF_NAME, default=CONF_DEFAULT_NAME): cv.string,
     vol.Optional(CONF_PORT, default=6419): cv.port,
     vol.Optional(CONF_TIMEOUT, default=10): cv.byte,
 })
@@ -38,22 +41,36 @@ ICON_VDR_RECORDING_NONE = "mdi:close-circle-outline"
 STATE_ONLINE = "on"
 STATE_OFFLINE = "off"
 
+SENSORS = ['vdrinfo', 'diskinfo']
+
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=5)
+
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
     from pyvdr import PYVDR
 
+
+    name = config.get(CONF_NAME)
+    host = config.get(CONF_HOST)
+    _LOGGER.info('Config {}, name {}'.format(config, name))
+    entities = []
+
     _LOGGER.info('Set up VDR with hostname {}, timeout={}'.format(config['host'], config['timeout']))
 
-    pyvdr_con = PYVDR(hostname=config['host'], timeout=config['timeout'])
+    pyvdr_con = PYVDR(hostname=config['host'])
 
-    for sensor in pyvdr_con.sensors():
+    for sensor in SENSORS:
         _LOGGER.info('Setting up sensortype {}'.format(sensor))
-        add_entities([VdrSensor(sensor, pyvdr_con)])
+        if sensor == 'vdrinfo':
+            entities.append(VdrInfo('_'.join([name, sensor]) , pyvdr_con))
+        if sensor == 'diskinfo':
+            entities.append(VdrDisk('_'.join([name, sensor]) , pyvdr_con))
+
+    add_entities(entities)
 
 
-class VdrSensor(Entity):
+class VdrInfo(Entity):
     """Representation of a Sensor."""
 
     def __init__(self, name, pyvdr):
@@ -61,19 +78,16 @@ class VdrSensor(Entity):
         self._state = STATE_OFFLINE
         self._name = name
         self._pyvdr = pyvdr
-        self._attributes = { 
+        self._attributes = {
             ATTR_CHANNEL_NAME: '',
             ATTR_CHANNEL_NUMBER: 0,
-            ATTR_DISKSTAT_TOTAL: 0,
-            ATTR_DISKSTAT_FREE: 0,
-            ATTR_DISKSTAT_USED_PERCENT: 0,
             ATTR_IS_RECORDING: False,
             ATTR_RECORDING_NAME: '',
-            ATTR_RECORDING_INSTANT: False,          
+            ATTR_RECORDING_INSTANT: False,
         }
 
     def _initAttributes(self):
-        return 
+        return
     @property
     def name(self):
         """Return the name of the sensor."""
@@ -104,17 +118,14 @@ class VdrSensor(Entity):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        if self._name is 'Vdrinfo':
+        if self._name == 'Vdrinfo':
             response = self._pyvdr.get_channel()
             self._attributes = {}
 
             if response is None:
                 self._state = STATE_OFFLINE
                 self._attributes.update({
-                    ATTR_ICON: ICON_VDR_OFFLINE,
-                    ATTR_DISKSTAT_TOTAL: 0,
-                    ATTR_DISKSTAT_FREE: 0,
-                    ATTR_DISKSTAT_USED_PERCENT: 0
+                    ATTR_ICON: ICON_VDR_OFFLINE
                 })
                 return
 
@@ -131,19 +142,87 @@ class VdrSensor(Entity):
                     ATTR_IS_RECORDING: True,
                     ATTR_RECORDING_NAME: response['name'],
                     ATTR_RECORDING_INSTANT: response['instant'],
-                    ATTR_ICON: 
-                        ICON_VDR_RECORDING_INSTANT 
-                            if response['instant'] == True 
+                    ATTR_ICON:
+                        ICON_VDR_RECORDING_INSTANT
+                            if response['instant'] == True
                             else ICON_VDR_RECORDING_TIMER })
             else:
                 self._attributes.update({
                     ATTR_IS_RECORDING: False
                 })
 
-            response = self._pyvdr.stat()
-            if response is not None and len(response)==3:
-                self._attributes.update({
-                    ATTR_DISKSTAT_TOTAL: int(response[0]) * 1024 ** 2,
-                    ATTR_DISKSTAT_FREE: int(response[1]) * 1024 ** 2,
-                    ATTR_DISKSTAT_USED_PERCENT: response[2]
-                })
+
+class VdrDisk(Entity):
+    """Representation of a Sensor."""
+
+    def __init__(self, name, pyvdr):
+        """Initialize the sensor."""
+        self._state = STATE_OFFLINE
+        self._name = name
+        self._pyvdr = pyvdr
+        self._attributes = {
+            ATTR_DISKSTAT_TOTAL: 0,
+            ATTR_DISKSTAT_FREE: 0,
+            ATTR_DISKSTAT_USED_PERCENT: 0
+        }
+
+    def _initAttributes(self):
+        return
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._name.capitalize()
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        return self._state
+
+    @property
+    def state_attributes(self):
+        """Return device specific state attributes."""
+        return self._attributes
+
+    @property
+    def state_icon(self):
+        """Return device specific state attributes."""
+        return 'mdi:harddisk'
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return ""
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self):
+        """Fetch new state data for the sensor.
+        This is the only method that should fetch new data for Home Assistant.
+        """
+        response = self._pyvdr.stat()
+        if response is None:
+            self._state = STATE_OFFLINE
+            self._attributes.update({
+                ATTR_ICON: ICON_VDR_OFFLINE,
+                ATTR_DISKSTAT_TOTAL: 0,
+                ATTR_DISKSTAT_FREE: 0,
+                ATTR_DISKSTAT_USED_PERCENT: 0
+            })
+            return
+
+        if response is None:
+            self._state = STATE_OFFLINE
+            self._attributes.update({
+                ATTR_ICON: ICON_VDR_OFFLINE,
+                ATTR_DISKSTAT_TOTAL: 0,
+                ATTR_DISKSTAT_FREE: 0,
+                ATTR_DISKSTAT_USED_PERCENT: 0
+            })
+            return
+
+        if response is not None and len(response)==3:
+            self._attributes.update({
+                ATTR_DISKSTAT_TOTAL: int(response[0]) * 1024 ** 2,
+                ATTR_DISKSTAT_FREE: int(response[1]) * 1024 ** 2,
+                ATTR_DISKSTAT_USED_PERCENT: response[2]
+            })
+
