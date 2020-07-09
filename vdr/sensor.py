@@ -46,12 +46,11 @@ ICON_VDR_RECORDING_INSTANT = "mdi:record-rec"
 ICON_VDR_RECORDING_TIMER = "mdi:history"
 ICON_VDR_RECORDING_NONE = "mdi:close-circle-outline"
 
-SENSORS = ['vdrinfo', 'diskinfo']
-#SENSORS = ['vdrinfo']
 
 SENSOR_TYPES = {
-    "vdrinfo" : ['Info', 'mdi:television-box', ""],
-    'diskusage': ['Disk usage', 'mdi:harddisk', UNIT_PERCENTAGE]
+    "vdrinfo" : ['Channel Info', 'mdi:television-box', ""],
+    'diskusage': ['Disk usage', 'mdi:harddisk', UNIT_PERCENTAGE],
+    'recinfo' : ['Recording', 'mdi:close-circle-outline', ""],
 }
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=5)
@@ -60,7 +59,6 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=5)
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
     from pyvdr import PYVDR
-
 
     conf_name = config.get(CONF_NAME)
     host = config.get(CONF_HOST)
@@ -84,15 +82,18 @@ class VdrSensor(Entity):
         """Initialize the sensor."""
         self._state = STATE_OFF
         self._sensor_type = sensor_type
-        self.type = 'lsfjskd'
-
-        self._name = '_'.join([conf_name, sensor_type])
-        self.friendly_name = SENSOR_TYPES[sensor_type][ATTR_SENSOR_NAME]
+        self._name = ' '.join(
+            [
+                conf_name.capitalize(),
+                SENSOR_TYPES[sensor_type][ATTR_SENSOR_NAME]
+            ])
         self._pyvdr = pyvdr
         self._init_attributes()
 
 
     def _init_attributes(self):
+        self._attributes = {}
+
         if self._sensor_type == 'vdrinfo':
             self._attributes = {
                 ATTR_CHANNEL_NAME: '',
@@ -123,11 +124,19 @@ class VdrSensor(Entity):
     @property
     def icon(self):
         """Return device specific state attributes."""
+        if self._state == 'instant':
+            return ICON_VDR_RECORDING_INSTANT
+
+        if self._state == 'timer':
+            return ICON_VDR_RECORDING_TIMER
+
         return SENSOR_TYPES[self._sensor_type][ATTR_ICON]
 
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
+        if self._state == STATE_OFF:
+            return ""
         return SENSOR_TYPES[self._sensor_type][ATTR_UNIT]
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
@@ -148,17 +157,35 @@ class VdrSensor(Entity):
             self._attributes.update({
                 ATTR_CHANNEL_NAME: response['name'],
                 ATTR_CHANNEL_NUMBER: response['number'],
-                ATTR_ICON: ICON_VDR_ONLINE
             })
 
             return
 
         if self._sensor_type == 'diskusage':
-            response = self._pyvdr.stat()
-            if response is not None and len(response)==3:
-                self._state = response[2]
-                self._attributes.update({
-                    ATTR_DISKSTAT_TOTAL: int(response[0]),
-                    ATTR_DISKSTAT_FREE: int(response[1])
-                })
+            try:
+                response = self._pyvdr.stat()
+                if response is not None and len(response)==3:
+                    self._state = response[2]
+                    self._attributes.update({
+                        ATTR_DISKSTAT_TOTAL: int(response[0]),
+                        ATTR_DISKSTAT_FREE: int(response[1])
+                    })
+            except:
+                _LOGGER.warning('Vdr seems to be offline')
+
             return
+
+        if self._sensor_type == 'recinfo':
+            response = self._pyvdr.is_recording()
+            if response is not None:
+                if response['instant'] == True:
+                    self._state = "instant"
+                else:
+                    self._state = "timer"
+                self._attributes.update(
+                    {
+                        ATTR_RECORDING_NAME: response['name'],
+                    })
+            else:
+                self._attributes = {}
+                self._state = STATE_OFF
