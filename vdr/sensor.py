@@ -17,6 +17,7 @@ from homeassistant.const import (
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
 
+
 _LOGGER = logging.getLogger(__name__)
 
 CONF_DEFAULT_NAME = "vdr"
@@ -46,11 +47,14 @@ ICON_VDR_RECORDING_INSTANT = "mdi:record-rec"
 ICON_VDR_RECORDING_TIMER = "mdi:history"
 ICON_VDR_RECORDING_NONE = "mdi:close-circle-outline"
 
+SENSOR_TYPE_DISKUSAGE = 'diskusage'
+SENSOR_TYPE_RECINFO = 'recinfo'
+SENSOR_TYPE_VDRINFO = 'vdrinfo'
 
 SENSOR_TYPES = {
-    "vdrinfo" : ['Channel Info', 'mdi:television-box', ""],
-    'diskusage': ['Disk usage', 'mdi:harddisk', UNIT_PERCENTAGE],
-    'recinfo' : ['Recording', 'mdi:close-circle-outline', ""],
+    SENSOR_TYPE_VDRINFO : ['Channel Info', 'mdi:television-box', ""],
+    SENSOR_TYPE_DISKUSAGE: ['Disk usage', 'mdi:harddisk', UNIT_PERCENTAGE],
+    SENSOR_TYPE_RECINFO : ['Recording', 'mdi:close-circle-outline', ""],
 }
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=5)
@@ -62,14 +66,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     conf_name = config.get(CONF_NAME)
     host = config.get(CONF_HOST)
-    _LOGGER.info('Config {}, name {}'.format(config, conf_name))
     _LOGGER.info('Set up VDR with hostname {}, timeout={}'.format(host, config['timeout']))
 
     pyvdr_con = PYVDR(hostname=host)
 
     entities = []
     for sensor_type in SENSOR_TYPES:
-        _LOGGER.info('Setting up sensortype {}'.format(sensor_type))
+        _LOGGER.debug('Setting up sensortype {}'.format(sensor_type))
         entities.append(VdrSensor(sensor_type, conf_name, pyvdr_con))
 
     add_entities(entities)
@@ -94,13 +97,13 @@ class VdrSensor(Entity):
     def _init_attributes(self):
         self._attributes = {}
 
-        if self._sensor_type == 'vdrinfo':
+        if self._sensor_type == SENSOR_TYPE_VDRINFO:
             self._attributes = {
                 ATTR_CHANNEL_NAME: '',
                 ATTR_CHANNEL_NUMBER: 0
             }
 
-        if self._sensor_type == 'diskusage':
+        if self._sensor_type == SENSOR_TYPE_DISKUSAGE:
             self._attributes = {
                 ATTR_DISKSTAT_TOTAL: 0,
                 ATTR_DISKSTAT_FREE: 0
@@ -146,7 +149,7 @@ class VdrSensor(Entity):
         """
         self._state = STATE_OFF
 
-        if self._sensor_type == 'vdrinfo':
+        if self._sensor_type == SENSOR_TYPE_VDRINFO:
             response = self._pyvdr.get_channel()
             self._attributes = {}
 
@@ -161,7 +164,7 @@ class VdrSensor(Entity):
 
             return
 
-        if self._sensor_type == 'diskusage':
+        if self._sensor_type == SENSOR_TYPE_DISKUSAGE:
             try:
                 response = self._pyvdr.stat()
                 if response is not None and len(response)==3:
@@ -171,11 +174,11 @@ class VdrSensor(Entity):
                         ATTR_DISKSTAT_FREE: int(response[1])
                     })
             except:
-                _LOGGER.warning('Vdr seems to be offline')
+                _LOGGER.debug('Vdr seems to be offline')
 
             return
 
-        if self._sensor_type == 'recinfo':
+        if self._sensor_type == SENSOR_TYPE_RECINFO:
             response = self._pyvdr.is_recording()
             if response is not None:
                 if response['instant'] == True:
