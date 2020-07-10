@@ -4,5 +4,5 @@
     "documentation": "https://www.example.com",
     "dependencies": [],
     "codeowners": ["baschno"],
-    "requirements": ["pyvdr==0.2.1"]
+    "requirements": ["pyvdr==0.2.2"]
   }
