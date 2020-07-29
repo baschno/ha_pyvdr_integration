@@ -64,6 +64,12 @@ SENDER_LOGOS = {
     "kabel eins" : 44
 }
 
+def get_logo_url(chan_name):
+    if chan_name in SENDER_LOGOS:
+        return "https://senderlogos.images.dvbdata.com/302x190_w/{}.png".format(SENDER_LOGOS[channel_name])
+    else:
+        return ""
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the vdr platform."""
     from pyvdr import PYVDR
@@ -105,12 +111,12 @@ class VdrDevice(MediaPlayerEntity):
             self._media_artist = channel_name
             self._media_title = epg_info.Title
             self._state = STATE_PLAYING
-            self._media_image_url = "https://senderlogos.images.dvbdata.com/302x190_w/{}.png".format(SENDER_LOGOS[channel_name])
+            self._media_image_url = get_logo_url(channel_name)
         except Exception:
             self._state = STATE_OFF
             self._media_artist = None
             self._media_title = None
-            _LOGGER.exception('Error: ')
+            _LOGGER.exception('Unable to update media player data.')
         return True
 
     @property
