@@ -22,7 +22,8 @@ from homeassistant.const import (
     CONF_TIMEOUT,
     STATE_IDLE,
     STATE_PAUSED,
-    STATE_PLAYING
+    STATE_PLAYING,
+    STATE_OFF
 )
 import homeassistant.helpers.config_validation as cv
 import homeassistant.util.dt as dt_util
@@ -105,9 +106,11 @@ class VdrDevice(MediaPlayerEntity):
             self._media_title = epg_info.Title
             self._state = STATE_PLAYING
             self._media_image_url = "https://senderlogos.images.dvbdata.com/302x190_w/{}.png".format(SENDER_LOGOS[channel_name])
-        except:
-            self._state = STATE_IDLE
-
+        except Exception:
+            self._state = STATE_OFF
+            self._media_artist = None
+            self._media_title = None
+            _LOGGER.exception('Error: ')
         return True
 
     @property
