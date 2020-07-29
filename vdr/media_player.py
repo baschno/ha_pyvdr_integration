@@ -61,7 +61,17 @@ SENDER_LOGOS = {
     "RTL2" : 41,
     "ProSieben" : 40,
     "VOX" : 42,
-    "kabel eins" : 44
+    "kabel eins" : 44,
+    "ONE HD": 146,
+    "3Sat HD": 56,
+    "SIXX": 694,
+    "WELT": 157,
+    "ntv": 66,
+    "Super RTL": 43,
+    "ProSieben MAXX": 783,
+    "ServusTV HD": 660,
+    "ZDF_neo HD": 659,
+    "WDR Köln HD": 146
 }
 
 def get_logo_url(chan_name):
