@@ -65,17 +65,17 @@ SENDER_LOGOS = {
     "ONE HD": 146,
     "3Sat HD": 56,
     "SIXX": 694,
-    "WELT": 157,
+    "WELT": 175,
     "ntv": 66,
     "Super RTL": 43,
     "ProSieben MAXX": 783,
     "ServusTV HD": 660,
     "ZDF_neo HD": 659,
-    "WDR Köln HD": 146
+    "WDR Köln HD": 46
 }
 
-def get_logo_url(chan_name):
-    if chan_name in SENDER_LOGOS:
+def get_logo_url(channel_name):
+    if channel_name in SENDER_LOGOS:
         return "https://senderlogos.images.dvbdata.com/302x190_w/{}.png".format(SENDER_LOGOS[channel_name])
     else:
         return ""
