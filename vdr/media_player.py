@@ -53,15 +53,15 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_TIMEOUT, default=10): cv.byte,
 })
 
-SENDER_LOGOS = {
-    "Das Erste HD" : 71,
-    "ZDF HD" : 37,
-    "SAT.1" : 39,
-    "RTL Television" : 38,
-    "RTL2" : 41,
-    "ProSieben" : 40,
-    "VOX" : 42,
-    "kabel eins" : 44,
+TVSTATIONS_LOGOS = {
+    "Das Erste HD": 71,
+    "ZDF HD": 37,
+    "SAT.1": 39,
+    "RTL Television": 38,
+    "RTL2": 41,
+    "ProSieben": 40,
+    "VOX": 42,
+    "kabel eins": 44,
     "ONE HD": 146,
     "3Sat HD": 56,
     "SIXX": 694,
@@ -74,11 +74,13 @@ SENDER_LOGOS = {
     "WDR Köln HD": 46
 }
 
-def get_logo_url(channel_name):
-    if channel_name in SENDER_LOGOS:
-        return "https://senderlogos.images.dvbdata.com/302x190_w/{}.png".format(SENDER_LOGOS[channel_name])
+
+def get_logo_url(chan_name):
+    if chan_name in TVSTATIONS_LOGOS:
+        return "https://senderlogos.images.dvbdata.com/302x190_w/{}.png".format(TVSTATIONS_LOGOS[chan_name])
     else:
         return ""
+
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the vdr platform."""
@@ -116,12 +118,16 @@ class VdrDevice(MediaPlayerEntity):
     def update(self):
         """Get the latest details from the device."""
         try:
-            channel, epg_info = self._pyvdr.get_channel_epg_info()
-            channel_name = channel['name']
-            self._media_artist = channel_name
+            channel = self._pyvdr.get_channel()
+            if channel is None:
+                return False
+
+            epg_info = self._pyvdr.get_channel_epg_info(channel_no=channel['number'])
+
+            self._media_artist = channel['name']
             self._media_title = epg_info.Title
             self._state = STATE_PLAYING
-            self._media_image_url = get_logo_url(channel_name)
+            self._media_image_url = get_logo_url(channel['name'])
         except Exception:
             self._state = STATE_OFF
             self._media_artist = None

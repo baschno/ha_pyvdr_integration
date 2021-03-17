@@ -10,7 +10,7 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_TIMEOUT,
-    UNIT_PERCENTAGE,
+    PERCENTAGE,
     STATE_OFF,
     STATE_ON,
 )
@@ -52,9 +52,9 @@ SENSOR_TYPE_RECINFO = 'recinfo'
 SENSOR_TYPE_VDRINFO = 'vdrinfo'
 
 SENSOR_TYPES = {
-    SENSOR_TYPE_VDRINFO : ['Channel Info', 'mdi:television-box', ""],
-    SENSOR_TYPE_DISKUSAGE: ['Disk usage', 'mdi:harddisk', UNIT_PERCENTAGE],
-    SENSOR_TYPE_RECINFO : ['Recording', 'mdi:close-circle-outline', ""],
+    SENSOR_TYPE_VDRINFO: ['Channel Info', 'mdi:television-box', ""],
+    SENSOR_TYPE_DISKUSAGE: ['Disk usage', 'mdi:harddisk', PERCENTAGE],
+    SENSOR_TYPE_RECINFO: ['Recording', 'mdi:close-circle-outline', ""],
 }
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=5)
@@ -92,7 +92,6 @@ class VdrSensor(Entity):
             ])
         self._pyvdr = pyvdr
         self._init_attributes()
-
 
     def _init_attributes(self):
         self._attributes = {}
@@ -167,7 +166,7 @@ class VdrSensor(Entity):
         if self._sensor_type == SENSOR_TYPE_DISKUSAGE:
             try:
                 response = self._pyvdr.stat()
-                if response is not None and len(response)==3:
+                if response is not None and len(response) == 3:
                     self._state = response[2]
                     self._attributes.update({
                         ATTR_DISKSTAT_TOTAL: int(response[0]),
@@ -181,7 +180,7 @@ class VdrSensor(Entity):
         if self._sensor_type == SENSOR_TYPE_RECINFO:
             response = self._pyvdr.is_recording()
             if response is not None:
-                if response['instant'] == True:
+                if response['instant']:
                     self._state = "instant"
                 else:
                     self._state = "timer"
