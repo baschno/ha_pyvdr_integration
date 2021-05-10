@@ -3,7 +3,8 @@
     "name": "Your Integration",
     "documentation": "https://www.example.com",
     "dependencies": [],
-    "codeowners": ["baschno"],
+    "codeowners": ["@baschno"],
     "requirements": ["pyvdr==0.3.0"],
-    "config_flow": false
+    "config_flow": false,
+    "version": "v0.0.1"
   }
